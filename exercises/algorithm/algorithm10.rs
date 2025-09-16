@@ -25,15 +25,12 @@ impl Graph for UndirectedGraph {
             adjacency_table: HashMap::new(),
         }
     }
-
     fn adjacency_table_mutable(&mut self) -> &mut HashMap<String, Vec<(String, i32)>> {
         &mut self.adjacency_table
     }
-
     fn adjacency_table(&self) -> &HashMap<String, Vec<(String, i32)>> {
         &self.adjacency_table
     }
-
     fn add_edge(&mut self, edge: (&str, &str, i32)) {
         Graph::add_edge(self, edge);
     }
@@ -60,7 +57,7 @@ pub trait Graph {
         self.add_node(source);
         self.add_node(dest);
 
-        // 无向图双向边
+        // 由于是无向图，需要添加双向边
         if let Some(edges) = self.adjacency_table_mutable().get_mut(source) {
             edges.push((dest.to_string(), weight));
         }
