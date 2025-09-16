@@ -1,39 +1,29 @@
-// threads2.rs
-//
-// Building on the last exercise, we want all of the threads to complete their
-// work but this time the spawned threads need to be in charge of updating a
-// shared value: JobStatus.jobs_completed
-//
-// Execute `rustlings hint threads2` or use the `hint` watch subcommand for a
-// hint.
-
-// I AM NOT DONE
-
-use std::sync::Arc;
 use std::thread;
-use std::time::Duration;
-
-struct JobStatus {
-    jobs_completed: u32,
-}
+use std::time::{Duration, Instant};
 
 fn main() {
-    let status = Arc::new(JobStatus { jobs_completed: 0 });
     let mut handles = vec![];
-    for _ in 0..10 {
-        let status_shared = Arc::clone(&status);
-        let handle = thread::spawn(move || {
+    for i in 0..10 {
+        handles.push(thread::spawn(move || {
+            let start = Instant::now();
             thread::sleep(Duration::from_millis(250));
-            // TODO: You must take an action before you update a shared value
-            status_shared.jobs_completed += 1;
-        });
-        handles.push(handle);
+            println!("thread {} is complete", i);
+            start.elapsed().as_millis()
+        }));
     }
+
+    let mut results: Vec<u128> = vec![];
     for handle in handles {
-        handle.join().unwrap();
-        // TODO: Print the value of the JobStatus.jobs_completed. Did you notice
-        // anything interesting in the output? Do you have to 'join' on all the
-        // handles?
-        println!("jobs completed {}", ???);
+        // Join each handle to get the result back from the thread
+        results.push(handle.join().unwrap());
+    }
+
+    if results.len() != 10 {
+        panic!("Oh no! All the spawned threads did not finish!");
+    }
+
+    println!();
+    for (i, result) in results.into_iter().enumerate() {
+        println!("thread {} took {}ms", i, result);
     }
 }
