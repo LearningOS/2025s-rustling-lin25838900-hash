@@ -1,13 +1,6 @@
-// structs2.rs
-//
-// Address all the TODOs to make the tests pass!
-//
-// Execute `rustlings hint structs2` or use the `hint` watch subcommand for a
-// hint.
+// exercises/structs/structs2.rs
 
-// I AM NOT DONE
-
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Order {
     name: String,
     year: u32,
@@ -32,13 +25,18 @@ fn create_order_template() -> Order {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::*; // ← 别删
 
     #[test]
     fn your_order() {
         let order_template = create_order_template();
-        // TODO: Create your own order using the update syntax and template above!
-        // let your_order =
+
+        let your_order = Order {
+            name: "Hacker in Rust".to_string(),
+            count: 1,
+            ..order_template.clone() // 避免把模板字段 move 掉
+        };
+
         assert_eq!(your_order.name, "Hacker in Rust");
         assert_eq!(your_order.year, order_template.year);
         assert_eq!(your_order.made_by_phone, order_template.made_by_phone);
