@@ -2,7 +2,7 @@
 	heap
 	This question requires you to implement a binary heap function
 */
-// I AM NOT DONE
+
 
 use std::cmp::Ord;
 use std::default::Default;
@@ -37,7 +37,26 @@ where
     }
 
     pub fn add(&mut self, value: T) {
-        //TODO
+        // 添加新元素到数组末尾
+        self.count += 1;
+        if self.count == self.items.len() {
+            self.items.push(value);
+        } else {
+            self.items[self.count] = value;
+        }
+
+        // 向上调整堆
+        let mut idx = self.count;
+        while idx > 1 {
+            let parent = self.parent_idx(idx);
+            // 如果父节点和当前节点满足堆的性质，就停止
+            if (self.comparator)(&self.items[parent], &self.items[idx]) {
+                break;
+            }
+            // 否则交换父节点和当前节点
+            self.items.swap(parent, idx);
+            idx = parent;
+        }
     }
 
     fn parent_idx(&self, idx: usize) -> usize {
@@ -57,8 +76,23 @@ where
     }
 
     fn smallest_child_idx(&self, idx: usize) -> usize {
-        //TODO
-		0
+        let left = self.left_child_idx(idx);
+        let right = self.right_child_idx(idx);
+        
+        if right <= self.count {
+            // 如果有右子节点，比较左右子节点
+            if (self.comparator)(&self.items[left], &self.items[right]) {
+                left
+            } else {
+                right
+            }
+        } else if left <= self.count {
+            // 只有左子节点
+            left
+        } else {
+            // 没有子节点
+            idx
+        }
     }
 }
 
@@ -84,8 +118,31 @@ where
     type Item = T;
 
     fn next(&mut self) -> Option<T> {
-        //TODO
-		None
+        if self.is_empty() {
+            return None;
+        }
+
+        // 取出堆顶元素
+        let ret = std::mem::replace(&mut self.items[1], T::default());
+        
+        // 将最后一个元素移到堆顶
+        if self.count > 1 {
+            self.items[1] = std::mem::replace(&mut self.items[self.count], T::default());
+        }
+        self.count -= 1;
+
+        // 向下调整堆
+        let mut idx = 1;
+        while self.children_present(idx) {
+            let child = self.smallest_child_idx(idx);
+            if (self.comparator)(&self.items[idx], &self.items[child]) {
+                break;
+            }
+            self.items.swap(idx, child);
+            idx = child;
+        }
+
+        Some(ret)
     }
 }
 
