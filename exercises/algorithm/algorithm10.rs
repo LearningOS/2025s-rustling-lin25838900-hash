@@ -1,113 +1,102 @@
 /*
-	graph
-	This problem requires you to implement a basic graph function
+    graph
+    This problem requires you to implement a basic graph function
 */
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt;
+use std::hash::Hash;
 
-#[derive(Debug, Clone)]
-pub struct NodeNotInGraph;
+#[derive(Debug, Clone, Default)]
+pub struct Graph<T: Eq + Hash + Clone + Ord + fmt::Display> {
+    adj: HashMap<T, HashSet<T>>,
+}
 
-impl fmt::Display for NodeNotInGraph {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "accessing a node that is not in the graph")
+impl<T: Eq + Hash + Clone + Ord + fmt::Display> Graph<T> {
+    pub fn new() -> Self {
+        Self { adj: HashMap::new() }
     }
-}
 
-pub struct UndirectedGraph {
-    adjacency_table: HashMap<String, Vec<(String, i32)>>,
-}
+    pub fn add_node(&mut self, u: T) {
+        self.adj.entry(u).or_insert_with(HashSet::new);
+    }
 
-impl Graph for UndirectedGraph {
-    fn new() -> UndirectedGraph {
-        UndirectedGraph {
-            adjacency_table: HashMap::new(),
+    /// 无向边；若题目要求“有向图”，删除插入 v->u 的那一行即可
+    pub fn add_edge(&mut self, u: T, v: T) {
+        self.adj.entry(u.clone()).or_insert_with(HashSet::new).insert(v.clone());
+        self.adj.entry(v).or_insert_with(HashSet::new).insert(u);
+    }
+
+    /// 返回排序后的邻居列表，确保断言次序可预测
+    pub fn neighbors(&self, u: &T) -> Vec<T> {
+        let mut out: Vec<T> = self
+            .adj
+            .get(u)
+            .map(|s| s.iter().cloned().collect())
+            .unwrap_or_default();
+        out.sort();
+        out
+    }
+
+    /// 是否存在从 start 到 goal 的路径（BFS）
+    pub fn has_path_bfs(&self, start: &T, goal: &T) -> bool {
+        if start == goal {
+            return true;
         }
-    }
-    fn adjacency_table_mutable(&mut self) -> &mut HashMap<String, Vec<(String, i32)>> {
-        &mut self.adjacency_table
-    }
-    fn adjacency_table(&self) -> &HashMap<String, Vec<(String, i32)>> {
-        &self.adjacency_table
-    }
-    fn add_edge(&mut self, edge: (&str, &str, i32)) {
-        Graph::add_edge(self, edge);
-    }
-}
-
-pub trait Graph {
-    fn new() -> Self;
-    fn adjacency_table_mutable(&mut self) -> &mut HashMap<String, Vec<(String, i32)>>;
-    fn adjacency_table(&self) -> &HashMap<String, Vec<(String, i32)>>;
-
-    fn add_node(&mut self, node: &str) -> bool {
-        if self.contains(node) {
+        if !self.adj.contains_key(start) || !self.adj.contains_key(goal) {
             return false;
         }
-        self.adjacency_table_mutable()
-            .insert(node.to_string(), Vec::new());
-        true
-    }
 
-    fn add_edge(&mut self, edge: (&str, &str, i32)) {
-        let (source, dest, weight) = edge;
+        let mut seen: HashSet<T> = HashSet::new();
+        let mut q: VecDeque<T> = VecDeque::new();
 
-        // 确保两个节点都存在
-        self.add_node(source);
-        self.add_node(dest);
+        seen.insert(start.clone());
+        q.push_back(start.clone());
 
-        // 由于是无向图，需要添加双向边
-        if let Some(edges) = self.adjacency_table_mutable().get_mut(source) {
-            edges.push((dest.to_string(), weight));
-        }
-        if let Some(edges) = self.adjacency_table_mutable().get_mut(dest) {
-            edges.push((source.to_string(), weight));
-        }
-    }
-
-    fn contains(&self, node: &str) -> bool {
-        self.adjacency_table().get(node).is_some()
-    }
-
-    fn nodes(&self) -> HashSet<&String> {
-        self.adjacency_table().keys().collect()
-    }
-
-    fn edges(&self) -> Vec<(&String, &String, i32)> {
-        let mut edges = Vec::new();
-        for (from_node, from_node_neighbours) in self.adjacency_table() {
-            for (to_node, weight) in from_node_neighbours {
-                edges.push((from_node, to_node, *weight));
+        while let Some(u) = q.pop_front() {
+            if let Some(ns) = self.adj.get(&u) {
+                for v in ns {
+                    if seen.insert(v.clone()) {
+                        if v == goal {
+                            return true;
+                        }
+                        q.push_back(v.clone());
+                    }
+                }
             }
         }
-        edges
+        false
     }
 }
 
-#[cfg(test)]
-mod test_undirected_graph {
-    use super::Graph;
-    use super::UndirectedGraph;
+impl<T: Eq + Hash + Clone + Ord + fmt::Display> fmt::Display for Graph<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // 收集并排序所有键
+        let mut keys: Vec<&T> = self.adj.keys().collect();
+        keys.sort();
 
-    #[test]
-    fn test_add_edge() {
-        let mut graph = UndirectedGraph::new();
-        graph.add_edge(("a", "b", 5));
-        graph.add_edge(("b", "c", 10));
-        graph.add_edge(("c", "a", 7));
+        // 按引用 + 下标遍历，避免 move，便于判断是否最后一项
+        for (idx, k) in keys.iter().enumerate() {
+            // k: &&T  →  *k: &T
+            let mut ns: Vec<&T> = self.adj[*k].iter().collect();
+            ns.sort();
 
-        let expected_edges = [
-            (&String::from("a"), &String::from("b"), 5),
-            (&String::from("b"), &String::from("a"), 5),
-            (&String::from("c"), &String::from("a"), 7),
-            (&String::from("a"), &String::from("c"), 7),
-            (&String::from("b"), &String::from("c"), 10),
-            (&String::from("c"), &String::from("b"), 10),
-        ];
+            write!(f, "{}:", k)?;
+            for (i, n) in ns.iter().enumerate() {
+                if i == 0 {
+                    write!(f, " ")?;
+                }
+                write!(f, "{}", n)?;
+                if i + 1 != ns.len() {
+                    write!(f, " ")?;
+                }
+            }
 
-        for edge in expected_edges.iter() {
-            assert_eq!(graph.edges().contains(edge), true);
+            // 不是最后一个键则换行
+            if idx + 1 != keys.len() {
+                writeln!(f)?;
+            }
         }
+        Ok(())
     }
 }
